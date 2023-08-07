@@ -547,7 +547,7 @@ page 4050 "GP Migration Configuration"
     trigger OnOpenPage()
     begin
         if not Rec.Get() then
-            Rec.Insert();
+            Rec.Insert(true);
 
         CurrPage.SetRecord(Rec);
         EnsureSettingsForAllCompanies();
@@ -593,7 +593,7 @@ page 4050 "GP Migration Configuration"
                     GPCompanyAdditionalSettingsEachCompany.Validate("Migrate Hist. Inv. Trx.", Rec."Migrate Hist. Inv. Trx.");
                     GPCompanyAdditionalSettingsEachCompany.Validate("Migrate Hist. Purch. Trx.", Rec."Migrate Hist. Purch. Trx.");
 
-                    GPCompanyAdditionalSettingsEachCompany.Insert();
+                    GPCompanyAdditionalSettingsEachCompany.Insert(true);
                 end;
             until HybridCompany.Next() = 0;
 
@@ -603,6 +603,7 @@ page 4050 "GP Migration Configuration"
     local procedure PrepSettingsForFieldUpdate(): Boolean
     begin
         GPCompanyAdditionalSettings.SetFilter("Name", '<>%1', '');
+        GPCompanyAdditionalSettings.SetRange("Migration Completed", false);
         exit(GPCompanyAdditionalSettings.FindSet());
     end;
 
@@ -610,10 +611,11 @@ page 4050 "GP Migration Configuration"
     var
         GPCompanyAdditionalSettingsInit: Record "GP Company Additional Settings";
     begin
+        GPCompanyAdditionalSettingsInit.SetRange("Migration Completed", false);
         GPCompanyAdditionalSettingsInit.DeleteAll();
 
         Rec.Init();
-        Rec.Insert();
+        Rec.Insert(true);
 
         CurrPage.SetRecord(Rec);
     end;
@@ -649,6 +651,12 @@ page 4050 "GP Migration Configuration"
         Rec.Validate("Migrate Hist. Inv. Trx.", GPCompanyAdditionalSettingsInit."Migrate Hist. Inv. Trx.");
         Rec.Validate("Migrate Hist. Purch. Trx.", GPCompanyAdditionalSettingsInit."Migrate Hist. Purch. Trx.");
 
+        EnableDisableAllHistTrx := Rec."Migrate Hist. GL Trx." and
+                                                        Rec."Migrate Hist. AR Trx." and
+                                                        Rec."Migrate Hist. AP Trx." and
+                                                        Rec."Migrate Hist. Inv. Trx." and
+                                                        Rec."Migrate Hist. Purch. Trx.";
+
         CurrPage.Update(true);
 
         EnsureSettingsForAllCompanies();
@@ -672,6 +680,7 @@ page 4050 "GP Migration Configuration"
         GPCompanyAdditionalSettingsCompanies: Record "GP Company Additional Settings";
     begin
         GPCompanyAdditionalSettingsCompanies.SetFilter("Name", '<>%1', '');
+        GPCompanyAdditionalSettingsCompanies.SetRange("Migration Completed", false);
         if GPCompanyAdditionalSettingsCompanies.FindSet() then
             repeat
                 if (GPCompanyAdditionalSettingsCompanies."Global Dimension 1" = '') then
@@ -690,6 +699,7 @@ page 4050 "GP Migration Configuration"
         GPCompanyAdditionalSettingsCompanies: Record "GP Company Additional Settings";
     begin
         GPCompanyAdditionalSettingsCompanies.SetFilter("Name", '<>%1', '');
+        GPCompanyAdditionalSettingsCompanies.SetRange("Migration Completed", false);
         if GPCompanyAdditionalSettingsCompanies.FindSet() then
             repeat
                 if (DimensionLabel = '') or CompanyHasSegment(GPCompanyAdditionalSettingsCompanies.Name, DimensionLabel) then begin

@@ -283,6 +283,9 @@ page 30022 "APIV2 - Dimension Set Lines"
         SalesShipmentLine: Record "Sales Shipment Line";
         PurchRcptHeader: Record "Purch. Rcpt. Header";
         PurchRcptLine: Record "Purch. Rcpt. Line";
+        PurchCrMemoEntityBuffer: Record "Purch. Cr. Memo Entity Buffer";
+        PurchCrMemoHdr: Record "Purch. Cr. Memo Hdr.";
+        PurchCrMemoLine: Record "Purch. Cr. Memo Line";
         DimensionSetEntryBufferParentType: Enum "Dimension Set Entry Buffer Parent Type";
         ErrorMsg: Text;
     begin
@@ -318,6 +321,8 @@ page 30022 "APIV2 - Dimension Set Lines"
                             SalesInvoiceHeader.SetRange("Draft Invoice SystemId", ParentIdFilter);
                             if SalesInvoiceHeader.FindFirst() then
                                 exit(SalesInvoiceHeader."Dimension Set ID");
+                            if SalesInvoiceHeader.GetBySystemId(ParentIdFilter) then
+                                exit(SalesInvoiceHeader."Dimension Set ID");
                         end;
                 end;
             DimensionSetEntryBufferParentType::"Purchase Invoice":
@@ -330,6 +335,8 @@ page 30022 "APIV2 - Dimension Set Lines"
                         end else begin
                             PurchInvHeader.SetRange("Draft Invoice SystemId", ParentIdFilter);
                             if PurchInvHeader.FindFirst() then
+                                exit(PurchInvHeader."Dimension Set ID");
+                            if PurchInvHeader.GetBySystemId(ParentIdFilter) then
                                 exit(PurchInvHeader."Dimension Set ID");
                         end;
                 end;
@@ -381,6 +388,28 @@ page 30022 "APIV2 - Dimension Set Lines"
             DimensionSetEntryBufferParentType::"Purchase Order Line":
                 if PurchaseLine.GetBySystemId(ParentIdFilter) then
                     exit(PurchaseLine."Dimension Set ID");
+            DimensionSetEntryBufferParentType::"Purchase Credit Memo":
+                begin
+                    PurchCrMemoEntityBuffer.SetFilter(Id, ParentIdFilter);
+                    if PurchCrMemoEntityBuffer.FindFirst() then
+                        if not PurchCrMemoEntityBuffer.Posted then begin
+                            if PurchaseHeader.GetBySystemId(ParentIdFilter) then
+                                exit(PurchaseHeader."Dimension Set ID");
+                        end else begin
+                            PurchCrMemoHdr.SetRange("Draft Cr. Memo SystemId", ParentIdFilter);
+                            if PurchCrMemoHdr.FindFirst() then
+                                exit(PurchCrMemoHdr."Dimension Set ID");
+                            if PurchCrMemoHdr.GetBySystemId(ParentIdFilter) then
+                                exit(PurchCrMemoHdr."Dimension Set ID");
+                        end;
+                end;
+            DimensionSetEntryBufferParentType::"Purchase Credit Memo Line":
+                begin
+                    if PurchaseLine.GetBySystemId(ParentIdFilter) then
+                        exit(PurchaseLine."Dimension Set ID");
+                    if PurchCrMemoLine.GetBySystemId(ParentIdFilter) then
+                        exit(PurchCrMemoLine."Dimension Set ID");
+                end;
         end;
         ErrorMsg := StrSubstNo(ParentDoesntExistErr, ParentIdFilter);
         Error(ErrorMsg);
@@ -404,6 +433,9 @@ page 30022 "APIV2 - Dimension Set Lines"
         SalesInvoiceLine: Record "Sales Invoice Line";
         PurchaseLine: Record "Purchase Line";
         PurchInvLine: Record "Purch. Inv. Line";
+        PurchCrMemoEntityBuffer: Record "Purch. Cr. Memo Entity Buffer";
+        PurchCrMemoHdr: Record "Purch. Cr. Memo Hdr.";
+        PurchCrMemoLine: Record "Purch. Cr. Memo Line";
         DimensionManagement: Codeunit "DimensionManagement";
         DimensionSetEntryBufferParentType: Enum "Dimension Set Entry Buffer Parent Type";
         ErrorMsg: Text;
@@ -478,6 +510,13 @@ page 30022 "APIV2 - Dimension Set Lines"
                                 SalesInvoiceHeader.Modify(true);
                                 exit;
                             end;
+                            if SalesInvoiceHeader.GetBySystemId(ParentIdFilter) then begin
+                                SalesInvoiceHeader."Dimension Set ID" := DimensionManagement.GetDimensionSetID(TempDimensionSetEntry);
+                                DimensionManagement.UpdateGlobalDimFromDimSetID(
+                                    SalesInvoiceHeader."Dimension Set ID", SalesInvoiceHeader."Shortcut Dimension 1 Code", SalesInvoiceHeader."Shortcut Dimension 2 Code");
+                                SalesInvoiceHeader.Modify(true);
+                                exit;
+                            end;
                         end;
                 end;
             DimensionSetEntryBufferParentType::"Purchase Invoice":
@@ -495,6 +534,13 @@ page 30022 "APIV2 - Dimension Set Lines"
                         end else begin
                             PurchInvHeader.SetRange("Draft Invoice SystemId", ParentIdFilter);
                             if PurchInvHeader.FindFirst() then begin
+                                PurchInvHeader."Dimension Set ID" := DimensionManagement.GetDimensionSetID(TempDimensionSetEntry);
+                                DimensionManagement.UpdateGlobalDimFromDimSetID(
+                                    PurchInvHeader."Dimension Set ID", PurchInvHeader."Shortcut Dimension 1 Code", PurchInvHeader."Shortcut Dimension 2 Code");
+                                PurchInvHeader.Modify(true);
+                                exit;
+                            end;
+                            if PurchInvHeader.GetBySystemId(ParentIdFilter) then begin
                                 PurchInvHeader."Dimension Set ID" := DimensionManagement.GetDimensionSetID(TempDimensionSetEntry);
                                 DimensionManagement.UpdateGlobalDimFromDimSetID(
                                     PurchInvHeader."Dimension Set ID", PurchInvHeader."Shortcut Dimension 1 Code", PurchInvHeader."Shortcut Dimension 2 Code");
@@ -583,6 +629,53 @@ page 30022 "APIV2 - Dimension Set Lines"
                         PurchaseLine."Dimension Set ID", PurchaseLine."Shortcut Dimension 1 Code", PurchaseLine."Shortcut Dimension 2 Code");
                     PurchaseLine.Modify(true);
                     exit;
+                end;
+            DimensionSetEntryBufferParentType::"Purchase Credit Memo":
+                begin
+                    PurchCrMemoEntityBuffer.SetFilter(Id, ParentIdFilter);
+                    if PurchCrMemoEntityBuffer.FindFirst() then
+                        if not PurchCrMemoEntityBuffer.Posted then begin
+                            if PurchaseHeader.GetBySystemId(ParentIdFilter) then begin
+                                PurchaseHeader."Dimension Set ID" := DimensionManagement.GetDimensionSetID(TempDimensionSetEntry);
+                                DimensionManagement.UpdateGlobalDimFromDimSetID(
+                                    PurchaseHeader."Dimension Set ID", PurchaseHeader."Shortcut Dimension 1 Code", PurchaseHeader."Shortcut Dimension 2 Code");
+                                PurchaseHeader.Modify(true);
+                                exit;
+                            end;
+                        end else begin
+                            PurchCrMemoHdr.SetRange("Draft Cr. Memo SystemId", ParentIdFilter);
+                            if PurchCrMemoHdr.FindFirst() then begin
+                                PurchCrMemoHdr."Dimension Set ID" := DimensionManagement.GetDimensionSetID(TempDimensionSetEntry);
+                                DimensionManagement.UpdateGlobalDimFromDimSetID(
+                                    PurchCrMemoHdr."Dimension Set ID", PurchCrMemoHdr."Shortcut Dimension 1 Code", PurchCrMemoHdr."Shortcut Dimension 2 Code");
+                                PurchCrMemoHdr.Modify(true);
+                                exit;
+                            end;
+                            if PurchCrMemoHdr.GetBySystemId(ParentIdFilter) then begin
+                                PurchCrMemoHdr."Dimension Set ID" := DimensionManagement.GetDimensionSetID(TempDimensionSetEntry);
+                                DimensionManagement.UpdateGlobalDimFromDimSetID(
+                                    PurchCrMemoHdr."Dimension Set ID", PurchCrMemoHdr."Shortcut Dimension 1 Code", PurchCrMemoHdr."Shortcut Dimension 2 Code");
+                                PurchCrMemoHdr.Modify(true);
+                                exit;
+                            end;
+                        end;
+                end;
+            DimensionSetEntryBufferParentType::"Purchase Credit Memo Line":
+                begin
+                    if PurchaseLine.GetBySystemId(ParentIdFilter) then begin
+                        PurchaseLine."Dimension Set ID" := DimensionManagement.GetDimensionSetID(TempDimensionSetEntry);
+                        DimensionManagement.UpdateGlobalDimFromDimSetID(
+                            PurchaseLine."Dimension Set ID", PurchaseLine."Shortcut Dimension 1 Code", PurchaseLine."Shortcut Dimension 2 Code");
+                        PurchaseLine.Modify(true);
+                        exit;
+                    end;
+                    if PurchCrMemoLine.GetBySystemId(ParentIdFilter) then begin
+                        PurchCrMemoLine."Dimension Set ID" := DimensionManagement.GetDimensionSetID(TempDimensionSetEntry);
+                        DimensionManagement.UpdateGlobalDimFromDimSetID(
+                            PurchCrMemoLine."Dimension Set ID", PurchCrMemoLine."Shortcut Dimension 1 Code", PurchCrMemoLine."Shortcut Dimension 2 Code");
+                        PurchCrMemoLine.Modify(true);
+                        exit;
+                    end;
                 end;
         end;
         ErrorMsg := StrSubstNo(ParentDoesNotExistOrReadOnlyErr, ParentIdFilter, ParentTypeFilter);
